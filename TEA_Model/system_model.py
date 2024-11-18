@@ -3,7 +3,7 @@ from scipy.optimize import fsolve, minimize, Bounds
 
 # Physical properties
 rho_CH4 = 0.7168        # methane density (kg/m^3)
-eta_gasturbine = 0.3    # efficiency of gas turbine used for electricity generation
+eta_generator = 0.3    # efficiency of gas turbine used for electricity generation
 btu_h2o = 1500          # energy required to remove 1lb H2O (BTU/lb H2O)
 
 
@@ -32,7 +32,7 @@ p['pf'] = 3.3e-8        # pressure filter operating energy demand (MMUSD/m^3 fee
 p['nat_gas'] = 5.84     # natural gas price (USD/MMBTU <--> USD/1000 SCF) 
 p['elec'] = 0.11        # price of electricity (USD/kWh)
 p['co2_rem'] = 40       # price of removing CO2 from biogas (USD/tonne CO2)
-p['h2s_rem'] = 0.0667   # price of removing H2S from biogas (USD/tonne biogas)
+p['h2s_rem'] = 0.0667   # price of removing H2S from biogas (USD/kg biogas)
 p['labor'] = 9.34/2428  # labor costs for PBR based on a facility of size 2428 acres (MMUSD/acre/yr)
 p['maint'] = 0.05       # maintenance cost fraction (MMUSD/MMUSD ISBL)
 p['op'] = 0.025         # business costs cost fraction (MMUSD/MMUSD ISBL)
@@ -510,13 +510,13 @@ def MSP(msp, p, units, parameters, constants, DROI = 0.15, tax = 0.21):
     ft3_m3 = constants[1]
     SCF_BTU = constants[2]
     BTU_kWh = constants[3]
-    eta_gasturbine = constants[4]
+    eta_generator = constants[4]
     
     x_credits = 0#1.57103702
     
     cb_revenue = msp*1e3*m_cb
     biogas_revenue = p['nat_gas']*((CGA.x_CH4*CGA.m_CH4*1e3/rho_CH4)*ft3_m3/SCF_BTU)
-    electricity_revenue = p['elec']*eta_gasturbine*((1-CGA.x_CH4)*CGA.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh
+    electricity_revenue = p['elec']*eta_generator*((1-CGA.x_CH4)*CGA.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh
     
     p_credit_revenue = (74.5*x_credits)*P_in*1e3 
     rin_credits_revenue = 0.0*p['rin']*CGA.m_CH4*CGA.x_CH4*1e3
@@ -585,7 +585,7 @@ TAC = TCI_annualized+TOC # total annualized cost (USD/yr)
 msp_args = (p,
             [CGA],
             np.array([PBR_mod.m_P+SLS.m_PS, PBR_mod.m_cb, depreciation, TCI, TOC, project_life]),
-            np.array([rho_CH4, ft3_m3, SCF_BTU, BTU_kWh, eta_gasturbine]))
+            np.array([rho_CH4, ft3_m3, SCF_BTU, BTU_kWh, eta_generator]))
 msp = fsolve(MSP, 3, args = msp_args)
 
 nutrient_value = (p['DAP_P']*PBR_mod.m_P)/PBR_mod.m_cb
@@ -607,12 +607,12 @@ def credit_level(x, p, units, parameters, constants, DROI = 0.15, tax = 0.21, nu
     ft3_m3 = constants[1]
     SCF_BTU = constants[2]
     BTU_kWh = constants[3]
-    eta_gasturbine = constants[4]
+    eta_generator = constants[4]
     
     
     cb_revenue = msp*1e3*m_cb
     biogas_revenue = p['nat_gas']*((CGA.x_CH4*CGA.m_CH4*1e3/rho_CH4)*ft3_m3/SCF_BTU)
-    electricity_revenue = p['elec']*eta_gasturbine*((1-CGA.x_CH4)*CGA.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh
+    electricity_revenue = p['elec']*eta_generator*((1-CGA.x_CH4)*CGA.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh
 
     p_credit_revenue = (74.5*x)*P_in*1e3                          # 0.71642326 makes the msp:nv 1 (just from this alone); 0.34126446 all 3 credits
     rin_credits_revenue = 0.0*p['rin']*CGA.m_CH4*CGA.x_CH4*1e3    # 0.65169682 make the the msp:nv 1; 0.34126446 all 3 credits
@@ -642,8 +642,8 @@ sol = minimize(credit_level,
 x_credits = sol.x
 #%% UTILITY USE AND GWP POTENTIAL
 # Front end
-digester_sls_utility = 0.17*eta_gasturbine*(Digester.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh      # kWhr/yr electricity used
-cga_utility = eta_gasturbine*(Digester.m_CH4*(1-x_CH4market)*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh    # kWhr/yr electricity generated
+digester_sls_utility = 0.17*eta_generator*(Digester.m_CH4*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh      # kWhr/yr electricity used
+cga_utility = eta_generator*(Digester.m_CH4*(1-x_CH4market)*1e3/rho_CH4)*ft3_m3*SCF_BTU/BTU_kWh    # kWhr/yr electricity generated
 
 # b-PBR
 mixing_utility = mixing_cost*1e6/p['elec']                                                          # kWhr/yr electricity used
